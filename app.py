@@ -1,17 +1,9 @@
-# ==========================================================
-# SIMULADOR DE ESCENARIOS DE EBT
-# APLICACIÓN PRODUCTIVA
-# ==========================================================
-
+# Simulador de escenarios de EBT: Aplicación productiva
 import streamlit as st
 import pandas as pd
 import joblib
 
-
-# ==========================================================
-# 1. CONFIGURACIÓN DE LA APLICACIÓN
-# ==========================================================
-
+# 1. Configuración de la aplicación
 st.set_page_config(
     page_title="Simulador de escenarios de EBT",
     page_icon="📊",
@@ -30,11 +22,7 @@ st.write(
     """
 )
 
-
-# ==========================================================
-# 2. CARGA DEL MODELO Y DATOS DE REFERENCIA
-# ==========================================================
-
+# 2. Carga del modelo y datos de referencia
 @st.cache_resource
 def cargar_modelo():
 
@@ -48,12 +36,12 @@ def cargar_datos():
 
     datos = pd.read_csv(
         "datos_referencia.csv",
-        parse_dates=["Fecha"]
+        parse_dates=["fecha"]
     )
 
     return (
         datos
-        .sort_values("Fecha")
+        .sort_values("fecha")
         .reset_index(drop=True)
     )
 
@@ -65,11 +53,7 @@ datos_referencia = cargar_datos()
 modelo = artefacto["modelo"]
 features_modelo = artefacto["features"]
 
-
-# ==========================================================
-# 3. FUNCIONES AUXILIARES
-# ==========================================================
-
+# 3. Funciones auxiliares
 def nombre_mes_espanol(fecha):
 
     meses = {
@@ -163,11 +147,7 @@ def formato_entero_es(valor):
         .replace(",", ".")
     )
 
-
-# ==========================================================
-# 4. CONSTRUCCIÓN DEL ESCENARIO
-# ==========================================================
-
+# 4. Construcción del escenario
 def construir_escenario(
     cartera,
     patrimonio,
@@ -179,33 +159,22 @@ def construir_escenario(
     features_modelo
 ):
 
-    # ------------------------------------------------------
     # EBT del último mes observado
-    # ------------------------------------------------------
-
     ebt_anterior = (
         datos_referencia
-        .iloc[-1]["EBT"]
+        .iloc[-1]["ebt"]
     )
 
-
-    # ------------------------------------------------------
     # Ratio deuda / patrimonio
-    # ------------------------------------------------------
-
     ratio_deuda_patrimonio = (
         deuda / patrimonio
     )
 
-
-    # ------------------------------------------------------
     # TPM acumulada 6 meses
-    # ------------------------------------------------------
-
     serie_tpm = pd.concat(
         [
             datos_referencia[
-                "tasa_politica_Monetaria"
+                "tasa_politica_monetaria"
             ],
             pd.Series([tpm])
         ],
@@ -224,11 +193,7 @@ def construir_escenario(
         .iloc[-1]
     )
 
-
-    # ------------------------------------------------------
     # IBC acumulado 3 meses
-    # ------------------------------------------------------
-
     serie_ibc = pd.concat(
         [
             datos_referencia[
@@ -251,11 +216,7 @@ def construir_escenario(
         .iloc[-1]
     )
 
-
-    # ------------------------------------------------------
     # Fila final utilizada por LightGBM
-    # ------------------------------------------------------
-
     escenario = pd.DataFrame(
         [{
             "cartera_total":
@@ -267,30 +228,27 @@ def construir_escenario(
             "deuda":
                 deuda,
 
-            "tasa_politica_Monetaria":
+            "tasa_politica_monetaria":
                 tpm,
 
-            "Vehiculos_Mensuales_Estimados":
+            "vehiculos_mensuales_estimados":
                 vehiculos,
 
-            "TPM_acum_6m":
+            "tpm_acum_6m":
                 tpm_acum_6m,
 
-            "IBC_acum_3m":
+            "ibc_acum_3m":
                 ibc_acum_3m,
 
             "ratio_deuda_patrimonio":
                 ratio_deuda_patrimonio,
 
-            "EBT_lag_1":
+            "ebt_lag_1":
                 ebt_anterior
         }]
     )
 
-
-    # Mantener exactamente las variables
-    # y el orden utilizado durante el entrenamiento
-
+    # Mantener exactamente las variables y el orden utilizado durante el entrenamiento
     escenario = escenario[
         features_modelo
     ]
@@ -298,11 +256,7 @@ def construir_escenario(
 
     return escenario
 
-
-# ==========================================================
-# 5. FORMATO VISUAL DE LAS VARIABLES DEL MODELO
-# ==========================================================
-
+# 5. Formato visual de las variables del modelo
 def preparar_variables_visuales(
     escenario
 ):
@@ -321,56 +275,40 @@ def preparar_variables_visuales(
             variable
         ]
 
-
-        # --------------------------------------------------
         # Variables monetarias
-        # --------------------------------------------------
-
         if variable in [
             "cartera_total",
             "patrimonio",
             "deuda",
-            "EBT_lag_1"
+            "ebt_lag_1"
         ]:
 
             valor_visual = (
                 f"{formato_cop(valor)} COP"
             )
 
-
-        # --------------------------------------------------
         # Tasa actual
-        # --------------------------------------------------
-
         elif variable == (
-            "tasa_politica_Monetaria"
+            "tasa_politica_monetaria"
         ):
 
             valor_visual = (
                 f"{formato_decimal_es(valor, 2)} %"
             )
 
-
-        # --------------------------------------------------
         # Cambios acumulados de tasas
-        # --------------------------------------------------
-
         elif variable in [
-            "TPM_acum_6m",
-            "IBC_acum_3m"
+            "tpm_acum_6m",
+            "ibc_acum_3m"
         ]:
 
             valor_visual = (
                 f"{formato_decimal_es(valor, 2)} pp"
             )
 
-
-        # --------------------------------------------------
         # Vehículos
-        # --------------------------------------------------
-
         elif variable == (
-            "Vehiculos_Mensuales_Estimados"
+            "vehiculos_mensuales_estimados"
         ):
 
             valor_visual = (
@@ -379,11 +317,7 @@ def preparar_variables_visuales(
                 )
             )
 
-
-        # --------------------------------------------------
         # Ratio deuda / patrimonio
-        # --------------------------------------------------
-
         elif variable == (
             "ratio_deuda_patrimonio"
         ):
@@ -418,11 +352,7 @@ def preparar_variables_visuales(
         datos
     )
 
-
-# ==========================================================
-# 6. INFORMACIÓN DEL ÚLTIMO PERIODO
-# ==========================================================
-
+# 6. Información del último periodo
 ultimo_mes = (
     datos_referencia
     .iloc[-1]
@@ -430,7 +360,7 @@ ultimo_mes = (
 
 fecha_ultimo_mes = (
     ultimo_mes[
-        "Fecha"
+        "fecha"
     ]
 )
 
@@ -441,7 +371,7 @@ fecha_prediccion = (
 
 ebt_anterior = (
     ultimo_mes[
-        "EBT"
+        "ebt"
     ]
 )
 
@@ -457,11 +387,7 @@ mes_prediccion_texto = (
     )
 )
 
-
-# ==========================================================
-# 7. INICIALIZACIÓN DE SESSION STATE
-# ==========================================================
-
+# 7. Inicialización del session state
 if "cartera_input" not in st.session_state:
 
     st.session_state[
@@ -501,27 +427,14 @@ if "resultado_simulacion" not in st.session_state:
         "resultado_simulacion"
     ] = None
 
-
-# ==========================================================
-# 8. FUNCIÓN PREVIA AL ENVÍO
-# ==========================================================
-
+# 8. Función previa al envío
 def preparar_envio():
-
-    # Eliminar cualquier resultado anterior.
-    # Así no permanece visible una predicción
-    # correspondiente a un escenario anterior
-    # cuando el nuevo escenario es inválido.
 
     st.session_state[
         "resultado_simulacion"
     ] = None
 
-
-    # ------------------------------------------------------
     # Normalizar visualmente variables financieras
-    # ------------------------------------------------------
-
     campos = [
         "cartera_input",
         "patrimonio_input",
@@ -548,17 +461,10 @@ def preparar_envio():
 
         except ValueError:
 
-            # Se conserva el texto introducido
-            # para que posteriormente aparezca
-            # el mensaje de validación.
 
             pass
 
-
-# ==========================================================
-# 9. CONTEXTO DE LA PREDICCIÓN
-# ==========================================================
-
+# 9. Contexto de la predicción
 st.subheader(
     f"Escenario de predicción: "
     f"{mes_prediccion_texto.capitalize()}"
@@ -583,19 +489,12 @@ st.caption(
     """
 )
 
-
-# ==========================================================
-# 10. FORMULARIO DEL ESCENARIO
-# ==========================================================
-
+# 10. Formulario del escenario
 with st.form(
     "formulario_escenario"
 ):
 
-    # ------------------------------------------------------
     # Variables financieras
-    # ------------------------------------------------------
-
     st.markdown(
         "### Variables financieras"
     )
@@ -654,11 +553,7 @@ with st.form(
             )
         )
 
-
-    # ------------------------------------------------------
     # Variables macroeconómicas y sectoriales
-    # ------------------------------------------------------
-
     st.markdown(
         "### Variables macroeconómicas y sectoriales"
     )
@@ -676,7 +571,7 @@ with st.form(
                 "Tasa de Política Monetaria (%)",
                 value=float(
                     ultimo_mes[
-                        "tasa_politica_Monetaria"
+                        "tasa_politica_monetaria"
                     ]
                 ),
                 step=0.25,
@@ -708,7 +603,7 @@ with st.form(
                 "Vehículos mensuales estimados",
                 value=float(
                     ultimo_mes[
-                        "Vehiculos_Mensuales_Estimados"
+                        "vehiculos_mensuales_estimados"
                     ]
                 ),
                 step=100.0,
@@ -727,17 +622,10 @@ with st.form(
     )
 
 
-# ==========================================================
-# 11. EJECUCIÓN DE LA SIMULACIÓN
-# ==========================================================
-
+# 11. Ejecución de la simulación
 if simular:
 
-
-    # ------------------------------------------------------
     # Conversión de variables financieras
-    # ------------------------------------------------------
-
     try:
 
         cartera = texto_a_cop(
@@ -771,11 +659,7 @@ if simular:
 
         st.stop()
 
-
-    # ------------------------------------------------------
     # Validación de variables financieras
-    # ------------------------------------------------------
-
     if cartera < 0:
 
         st.error(
@@ -802,11 +686,7 @@ if simular:
 
         st.stop()
 
-
-    # ------------------------------------------------------
     # Validación de variables macroeconómicas y sectoriales
-    # ------------------------------------------------------
-
     if tpm < 0:
 
         st.error(
@@ -842,11 +722,7 @@ if simular:
 
         st.stop()
 
-
-    # ------------------------------------------------------
     # Construcción del escenario
-    # ------------------------------------------------------
-
     escenario = (
         construir_escenario(
             cartera=cartera,
@@ -860,11 +736,7 @@ if simular:
         )
     )
 
-
-    # ------------------------------------------------------
     # Validación de valores faltantes
-    # ------------------------------------------------------
-
     if (
         escenario
         .isna()
@@ -881,11 +753,7 @@ if simular:
 
         st.stop()
 
-
-    # ------------------------------------------------------
     # Predicción
-    # ------------------------------------------------------
-
     ebt_estimado = (
         modelo
         .predict(
@@ -893,11 +761,7 @@ if simular:
         )[0]
     )
 
-
-    # ------------------------------------------------------
     # Guardar resultado
-    # ------------------------------------------------------
-
     st.session_state[
         "resultado_simulacion"
     ] = {
@@ -908,11 +772,7 @@ if simular:
             escenario.copy()
     }
 
-
-# ==========================================================
-# 12. RESULTADO DE LA SIMULACIÓN
-# ==========================================================
-
+# 12. Resultado de la simulación
 resultado = (
     st.session_state[
         "resultado_simulacion"
@@ -934,11 +794,7 @@ if resultado is not None:
         ]
     )
 
-
-    # ------------------------------------------------------
     # Comparación con último EBT observado
-    # ------------------------------------------------------
-
     variacion_absoluta = (
         ebt_estimado
         - ebt_anterior
@@ -958,11 +814,7 @@ if resultado is not None:
 
         variacion_porcentual = 0
 
-
-    # ------------------------------------------------------
     # Presentación del resultado
-    # ------------------------------------------------------
-
     st.divider()
 
     st.markdown(
@@ -1010,11 +862,7 @@ if resultado is not None:
         f"{formato_cop(ebt_anterior)} COP"
     )
 
-
-    # ======================================================
-    # 13. VARIABLES UTILIZADAS POR EL MODELO
-    # ======================================================
-
+    # 13. Variables utilizadas por el modelo
     with st.expander(
         "Ver variables utilizadas por el modelo"
     ):
@@ -1032,11 +880,7 @@ if resultado is not None:
             hide_index=True
         )
 
-
-        # --------------------------------------------------
         # Explicación de variables calculadas automáticamente
-        # --------------------------------------------------
-
         st.markdown(
             f"""
             #### Variables calculadas automáticamente
@@ -1100,11 +944,7 @@ if resultado is not None:
             """
         )
 
-
-# ==========================================================
-# 14. NOTA METODOLÓGICA
-# ==========================================================
-
+# 14. Nota metodológica
 st.divider()
 
 st.markdown(
